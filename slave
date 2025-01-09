@@ -1,0 +1,59 @@
+#include <WiFi.h>
+
+const char* ssid = "Receiver-AP";  // SSID of Receiver's Access Point
+const char* password = "ReceiverPass";  // Password for Receiver's Access Point
+
+const char* receiverIP = "192.168.4.1";  // IP address of Receiver (Receiver's IP as an AP)
+const int receiverPort = 12345;  // Port to communicate with the Receiver
+
+WiFiClient client;
+
+void setup() {
+  Serial.begin(115200);
+  WiFi.begin(ssid, password);
+
+  // Wait for Wi-Fi connection
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to Wi-Fi...");
+  }
+
+  Serial.print("Sender IP Address: ");
+  Serial.println(WiFi.localIP());
+
+  delay(2000);
+}
+
+void loop() {
+  if (Serial.available()) {
+    String message = Serial.readStringUntil('\n');  // Read the message from Serial Monitor
+    message.trim();  // Remove any leading/trailing whitespace
+
+    if (client.connect(receiverIP, receiverPort)) {
+      Serial.println("Connected to Receiver!");
+
+      // Get the sender's MAC address
+      String senderMac = WiFi.macAddress();  // Get MAC address of the sender (Slave)
+      Serial.print("Sender MAC: ");
+      Serial.println(senderMac);
+
+      // Send the MAC address and message to the Receiver
+      client.print("MAC: ");
+      client.print(senderMac);
+      client.print(" - ");
+      client.println(message);
+      Serial.print("Message sent: ");
+      Serial.println(message);
+
+      // Wait for the response from the Receiver
+      String response = client.readStringUntil('\n');
+      Serial.print("Response from Receiver: ");
+      Serial.println(response);
+
+      client.stop();
+      Serial.println("Disconnected from Receiver.");
+    } else {
+      Serial.println("Failed to connect to Receiver. Retrying...");
+    }
+  }
+}
